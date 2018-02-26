@@ -1,5 +1,6 @@
 require_relative "./shared/logging_module"
 require_relative "./taskqueue/task_queue"
+require_relative "./wizards/private_configuration_wizard"
 
 module FastlaneCI
   # Launch is responsible for spawning up the whole
@@ -12,13 +13,14 @@ module FastlaneCI
     end
 
     def self.take_off
+      require_fastlane_ci
+      run_configuration_wizard
       verify_dependencies
       verify_system_requirements
       load_dot_env
       verify_env_variables
       write_configuration_directories
       setup_threads
-      require_fastlane_ci
       check_for_existing_setup
       prepare_server
       launch_workers
@@ -32,6 +34,10 @@ module FastlaneCI
 
       # allow use of `require` for all things under `shared`, helps with some cycle issues
       $LOAD_PATH << "shared"
+    end
+
+    def self.run_configuration_wizard
+      PrivateConfigurationWizard.new.run! unless self.ci_config_repo.exists?
     end
 
     def self.load_dot_env
