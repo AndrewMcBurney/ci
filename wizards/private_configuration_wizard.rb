@@ -2,11 +2,128 @@
 
 require_relative "wizard"
 require_relative "../ui/ui"
+require_relative "../services/file_writers/keys_writer.rb"
+require_relative "../services/file_writers/users_writer.rb"
+require_relative "../services/file_writers/projects_writer.rb"
 
 module FastlaneCI
+  # A helper module with functions specific to gathering user input used by
+  # the wizard
+  module ConfigurationInputHelpers
+    #####################################################
+    # @!group Configuration: configuration data
+    #####################################################
+
+    # An encryption key used to encrypt the CI user's API token
+    #
+    # @return [String]
+    def encryption_key
+      @encryption_key ||= begin
+        UI.message("Please enter an encryption key:")
+        UI.input("FASTLANE_CI_ENCRYPTION_KEY = ")
+      end
+    end
+
+    # The email associated with the CI user account
+    #
+    # @return [String]
+    def ci_user_email
+      @ci_user_email ||= begin
+        UI.message("Please enter your CI bot account email:")
+        UI.input("FASTLANE_CI_USER = ")
+      end
+    end
+
+    # The API token associated with the CI user account
+    #
+    # @return [String]
+    def ci_user_api_token
+      @ci_user_api_token ||= begin
+        UI.message("Please enter your CI bot account API token:")
+        UI.input("FASTLANE_CI_PASSWORD = ")
+      end
+    end
+
+    # The email associated with the clone user account
+    #
+    # @return [String]
+    def clone_user_email
+      @clone_user_email ||= begin
+        UI.message("Please enter your email for the initial clone account:")
+        UI.input("FASTLANE_CI_INITIAL_CLONE_EMAIL = ")
+      end
+    end
+
+    # The API token associated with the clone user account
+    #
+    # @return [String]
+    def clone_user_api_token
+      @clone_user_api_token ||= begin
+        UI.message("Please enter your API token for the initial clone account:")
+        UI.input("FASTLANE_CI_INITIAL_CLONE_API_TOKEN = ")
+      end
+    end
+
+    # The git repo used for configuration in the form: `username/reponame`
+    #
+    # @return [String]
+    def repo_shortform
+      @repo_shortform ||= begin
+        UI.message("Please enter the name for your private configuration repo:")
+        UI.input("FASTLANE_CI_REPO_URL=https://github.com/ ")
+      end
+    end
+  end
+
+  # A bunch of configuration related helper functions
+  module ConfigurationWizardHelpers
+    #####################################################
+    # @!group Helpers: configuration helper functions
+    #####################################################
+
+    # TODO: create separate class for making GitHub API requests
+    # Creates a remote repository. If the operation is unsuccessful, the method
+    # throws an exception
+    #
+    # @raises [StandardError]
+    def create_remote_repo!
+      cmd = TTY::Command.new
+      output = cmd.run(
+        <<~COMMAND.gsub(/\n\s+/, " ")
+          curl -X POST
+               -H "Authorization: token #{clone_user_api_token}"
+               -d '{ "private": true, "name": "#{repo_shortform.split('/')[1]}" }'
+               https://api.github.com/user/repos
+        COMMAND
+      )
+      raise StandardError if JSON.parse(output.out)["message"] == "Bad credentials"
+    end
+
+    # Encrypted CI user API token
+    #
+    # @return [GitRepo]
+    def configuration_git_repo
+      @configuration_git_repo ||= FastlaneCI::GitRepo.new(
+        git_config: Launch.ci_config_repo,
+        provider_credential: Launch.provider_credential
+      )
+    end
+
+    # Commits the most recent changes and pushes them to the new repo
+    def commit_and_push_changes!
+      configuration_git_repo.commit_changes!
+      configuration_git_repo.push
+    end
+  end
+
+  #
   # A class to walk a first-time user through creating a private configuration
   # repository
+  #
   class PrivateConfigurationWizard < Wizard
+    include ConfigurationWizardHelpers
+    include ConfigurationInputHelpers
+
     # Runs the initial configuration wizard, setting up the private GitHub
     # configuration repository
     def run!
@@ -140,32 +257,19 @@ module FastlaneCI
 
     # Write .keys configuration file with proper environment variables
     def write_keys_file
-      keys_file_path = File.join(FastlaneCI::FastlaneApp.settings.root, ".keys")
+      keys_file_path = File.join(FastlaneCI::FastlaneApp.settings.root, ".keys.sample")
 
-      File.open(keys_file_path, "w") do |file|
-        file.write(
-          <<~FILE
-            # Randomly generated key, that's used to encrypt the user passwords
-            FASTLANE_CI_ENCRYPTION_KEY='#{encryption_key}'
-
-            # The email address of your fastlane CI bot account
-            FASTLANE_CI_USER='#{ci_user_email}'
-
-            # The encrypted API token of your fastlane CI bot account
-            FASTLANE_CI_PASSWORD='#{ci_user_api_token}'
-
-            # The git URL (https) for the configuration repo
-            FASTLANE_CI_REPO_URL='https://github.com/#{repo_shortform}'
-
-            # Needed just for the first startup of fastlane.ci:
-            # The email address used for the intial clone for the config repo
-            FASTLANE_CI_INITIAL_CLONE_EMAIL='#{clone_user_email}'
-
-            # The API token used for the initial clone for the config repo
-            FASTLANE_CI_INITIAL_CLONE_API_TOKEN='#{clone_user_api_token}'
-          FILE
-        )
-      end
+      KeysWriter.new(
+        path: keys_file_path,
+        locals: {
+          encryption_key: encryption_key,
+          ci_user_email: ci_user_email,
+          ci_user_api_token: ci_user_api_token,
+          repo_shortform: repo_shortform,
+          clone_user_email: clone_user_email,
+          clone_user_api_token: clone_user_api_token
+        }
+      ).write!
 
       UI.success("Wrote #{keys_file_path}")
     end
@@ -174,28 +278,13 @@ module FastlaneCI
     def write_users_json_file
       users_json_file_path = configuration_git_repo.file_path("users.json")
 
-      File.open(users_json_file_path, "w") do |file|
-        file.write(
-          <<~FILE
-            [
-              {
-                "id": "#{SecureRandom.uuid}",
-                "email": "#{ci_user_email}",
-                "password_hash": "#{password_hash}",
-                "provider_credentials": [
-                  {
-                    "email": "#{ci_user_email}",
-                    "encrypted_api_token": "#{ci_user_encrypted_api_token}",
-                    "provider_name": "GitHub",
-                    "type": "github",
-                    "full_name": "Fastlane CI"
-                  }
-                ]
-              }
-            ]
-          FILE
-        )
-      end
+      UsersWriter.new(
+        path: users_json_file_path,
+        locals: {
+          ci_user_email: ci_user_email,
+          ci_user_api_token: ci_user_api_token
+        }
+      ).write!
 
       UI.success("Wrote #{users_json_file_path}")
     end
@@ -204,151 +293,12 @@ module FastlaneCI
     def write_projects_json_file
       projects_json_file_path = configuration_git_repo.file_path("projects.json")
 
-      File.open(projects_json_file_path, "w") do |file|
-        file.write(
-          <<~FILE
-            [
-              {
-                "repo_config": {
-                  "id": "#{SecureRandom.uuid}",
-                  "git_url": "https://github.com/your-name/fastlane-ci-demoapp",
-                  "full_name": "your-name/fastlane-ci-demoapp",
-                  "description": "Fastlane CI Demo App Repository",
-                  "name": "Fastlane CI Demo App",
-                  "provider_type_needed": "github",
-                  "hidden": false
-                },
-                "id": "#{SecureRandom.uuid}",
-                "project_name": "fastlane CI demo app test",
-                "lane": "test",
-                "enabled": true
-              }
-            ]
-          FILE
-        )
-      end
+      ProjectsWriter.new(
+        path: projects_json_file_path,
+        locals: {}
+      )
 
       UI.success("Wrote #{projects_json_file_path}")
-    end
-
-    #####################################################
-    # @!group Configuration: configuration data
-    #####################################################
-
-    # An encryption key used to encrypt the CI user's API token
-    #
-    # @return [String]
-    def encryption_key
-      @encryption_key ||= begin
-        UI.message("Please enter an encryption key:")
-        UI.input("FASTLANE_CI_ENCRYPTION_KEY = ")
-      end
-    end
-
-    # The email associated with the CI user account
-    #
-    # @return [String]
-    def ci_user_email
-      @ci_user_email ||= begin
-        UI.message("Please enter your CI bot account email:")
-        UI.input("FASTLANE_CI_USER = ")
-      end
-    end
-
-    # The API token associated with the CI user account
-    #
-    # @return [String]
-    def ci_user_api_token
-      @ci_user_api_token ||= begin
-        UI.message("Please enter your CI bot account API token:")
-        UI.input("FASTLANE_CI_PASSWORD = ")
-      end
-    end
-
-    # The email associated with the clone user account
-    #
-    # @return [String]
-    def clone_user_email
-      @clone_user_email ||= begin
-        UI.message("Please enter your email for the initial clone account:")
-        UI.input("FASTLANE_CI_INITIAL_CLONE_EMAIL = ")
-      end
-    end
-
-    # The API token associated with the clone user account
-    #
-    # @return [String]
-    def clone_user_api_token
-      @clone_user_api_token ||= begin
-        UI.message("Please enter your API token for the initial clone account:")
-        UI.input("FASTLANE_CI_INITIAL_CLONE_API_TOKEN = ")
-      end
-    end
-
-    # The git repo used for configuration in the form: `username/reponame`
-    #
-    # @return [String]
-    def repo_shortform
-      @repo_shortform ||= begin
-        UI.message("Please enter the name for your private configuration repo:")
-        UI.input("FASTLANE_CI_REPO_URL=https://github.com/ ")
-      end
-    end
-
-    #####################################################
-    # @!group Helpers: configuration helper functions
-    #####################################################
-
-    # Creates a remote repository. If the operation is unsuccessful, the method
-    # throws an exception
-    #
-    # @raises [StandardError]
-    def create_remote_repo!
-      cmd = TTY::Command.new
-      output = cmd.run(
-        <<~COMMAND.gsub(/\n\s+/, " ")
-          curl -X POST
-               -H "Authorization: token #{clone_user_api_token}"
-               -d '{ "private": true, "name": "#{repo_shortform.split('/')[1]}" }'
-               https://api.github.com/user/repos
-        COMMAND
-      )
-      raise StandardError if JSON.parse(output.out)["message"] == "Bad credentials"
-    end
-
-    # Encrypted CI user API token
-    #
-    # @return [String]
-    def ci_user_encrypted_api_token
-      @ci_user_encrypted_api_token ||= begin
-        new_encrypted_api_token = StringEncrypter.encode(ci_user_api_token)
-        Base64.encode64(new_encrypted_api_token)
-              .gsub("\r", '\\r')
-              .gsub("\n", '\\n')
-      end
-    end
-
-    # Returns a password hash for the CI user API token
-    #
-    # @return [String]
-    def password_hash
-      BCrypt::Password.create(ci_user_api_token)
-    end
-
-    # Encrypted CI user API token
-    #
-    # @return [GitRepo]
-    def configuration_git_repo
-      @configuration_git_repo ||= FastlaneCI::GitRepo.new(
-        git_config: Launch.ci_config_repo,
-        provider_credential: Launch.provider_credential
-      )
-    end
-
-    # Commits the most recent changes and pushes them to the new repo
-    def commit_and_push_changes!
-      configuration_git_repo.commit_changes!
-      configuration_git_repo.push
     end
   end
 end
