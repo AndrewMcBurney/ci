@@ -5,7 +5,6 @@ module FastlaneCI
   # @abstract
   class Wizard
     # @abstract
-    # @return [nil]
     def run!
       not_implemented(__method__)
     end

@@ -9,7 +9,7 @@ module FastlaneCI
     # @return [Hash]
     attr_reader :locals
 
-    # Instantiates with a path to write to, and template locals
+    # Instantiates with a path to write to, and template local variables
     #
     # @param [String] path
     # @param [Hash]   locals

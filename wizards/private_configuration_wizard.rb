@@ -1,6 +1,8 @@
 # rubocop:disable Layout/EmptyLinesAroundArguments
 
 require_relative "./wizard"
+require_relative "./helpers/configuration_wizard_helpers"
+
 require_relative "../ui/ui"
 require_relative "../services/api_clients/github_client"
 require_relative "../services/file_writers/keys_writer"
@@ -8,77 +10,37 @@ require_relative "../services/file_writers/users_writer"
 require_relative "../services/file_writers/projects_writer"
 
 module FastlaneCI
-  # A helper module with functions specific to gathering user input used by
-  # the wizard
-  module ConfigurationInputHelpers
-    #####################################################
-    # @!group Configuration: configuration data
-    #####################################################
-
-    # An encryption key used to encrypt the CI user's API token
-    #
-    # @return [String]
-    def encryption_key
-      @encryption_key ||= begin
-        UI.message("Please enter an encryption key:")
-        UI.input("FASTLANE_CI_ENCRYPTION_KEY = ")
-      end
-    end
-
-    # The email associated with the CI user account
-    #
-    # @return [String]
-    def ci_user_email
-      @ci_user_email ||= begin
-        UI.message("Please enter your CI bot account email:")
-        UI.input("FASTLANE_CI_USER = ")
-      end
-    end
-
-    # The API token associated with the CI user account
-    #
-    # @return [String]
-    def ci_user_api_token
-      @ci_user_api_token ||= begin
-        UI.message("Please enter your CI bot account API token:")
-        UI.input("FASTLANE_CI_PASSWORD = ")
-      end
-    end
-
-    # The email associated with the clone user account
-    #
-    # @return [String]
-    def clone_user_email
-      @clone_user_email ||= begin
-        UI.message("Please enter your email for the initial clone account:")
-        UI.input("FASTLANE_CI_INITIAL_CLONE_EMAIL = ")
-      end
-    end
-
-    # The API token associated with the clone user account
-    #
-    # @return [String]
-    def clone_user_api_token
-      @clone_user_api_token ||= begin
-        UI.message("Please enter your API token for the initial clone account:")
-        UI.input("FASTLANE_CI_INITIAL_CLONE_API_TOKEN = ")
-      end
-    end
-
-    # The git repo used for configuration in the form: `username/reponame`
-    #
-    # @return [String]
-    def repo_shortform
-      @repo_shortform ||= begin
-        UI.message("Please enter the name for your private configuration repo:")
-        UI.input("FASTLANE_CI_REPO_URL=https://github.com/ ")
-      end
-    end
-  end
-
   #
   # A class to walk a first-time user through creating a private configuration
-  # repository
+  # repository:
+  #
+  # 1) Prints a welcome message to the user and notifies them that they're
+  #    running the server for the first time
+  #
+  # 2) Prints information about the environment variables they need to set to
+  #    run FastlaneCI
+  #
+  # 3) Asks the user to input all their environment variables, and writes them
+  #    out to a `.keys` file in the project root
+  #
+  # 4) Loads the newly written environment variables from the `.keys` file
+  #    through `dotenv`
+  #
+  # 5) Creates a private repository using the `GitHubClient` with the clone
+  #    user's API token `FASTLANE_CI_INITIAL_CLONE_API_TOKEN`
+  #
+  # 6) Prints information about the `users.json` file
+  #
+  # 7) Asks the user to input variables specific to the `users.json`, file and
+  #    writes them out to the `users.json` file in the private configuration repo
+  #
+  # 8) Prints information about the `projects.json` file
+  #
+  # 9) Asks the user to input variables specific to the `projects.json`, file and
+  #    writes them out to the `projects.json` file in the private configuration
+  #    repo
+  #
+  # 10) Commits the changes to the private configuration repo and pushes them
   #
   class PrivateConfigurationWizard < Wizard
     include ConfigurationInputHelpers
