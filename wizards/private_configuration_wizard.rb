@@ -1,10 +1,11 @@
 # rubocop:disable Layout/EmptyLinesAroundArguments
 
-require_relative "wizard"
+require_relative "./wizard"
 require_relative "../ui/ui"
-require_relative "../services/file_writers/keys_writer.rb"
-require_relative "../services/file_writers/users_writer.rb"
-require_relative "../services/file_writers/projects_writer.rb"
+require_relative "../services/api_clients/github_client"
+require_relative "../services/file_writers/keys_writer"
+require_relative "../services/file_writers/users_writer"
+require_relative "../services/file_writers/projects_writer"
 
 module FastlaneCI
   # A helper module with functions specific to gathering user input used by
@@ -75,54 +76,13 @@ module FastlaneCI
     end
   end
 
-  # A bunch of configuration related helper functions
-  module ConfigurationWizardHelpers
-    #####################################################
-    # @!group Helpers: configuration helper functions
-    #####################################################
-
-    # TODO: create separate class for making GitHub API requests
-    # Creates a remote repository. If the operation is unsuccessful, the method
-    # throws an exception
-    #
-    # @raises [StandardError]
-    def create_remote_repo!
-      cmd = TTY::Command.new
-      output = cmd.run(
-        <<~COMMAND.gsub(/\n\s+/, " ")
-          curl -X POST
-               -H "Authorization: token #{clone_user_api_token}"
-               -d '{ "private": true, "name": "#{repo_shortform.split('/')[1]}" }'
-               https://api.github.com/user/repos
-        COMMAND
-      )
-      raise StandardError if JSON.parse(output.out)["message"] == "Bad credentials"
-    end
-
-    # Encrypted CI user API token
-    #
-    # @return [GitRepo]
-    def configuration_git_repo
-      @configuration_git_repo ||= FastlaneCI::GitRepo.new(
-        git_config: Launch.ci_config_repo,
-        provider_credential: Launch.provider_credential
-      )
-    end
-
-    # Commits the most recent changes and pushes them to the new repo
-    def commit_and_push_changes!
-      configuration_git_repo.commit_changes!
-      configuration_git_repo.push
-    end
-  end
-
   #
   # A class to walk a first-time user through creating a private configuration
   # repository
   #
   class PrivateConfigurationWizard < Wizard
-    include ConfigurationWizardHelpers
     include ConfigurationInputHelpers
+    include GitHubClient
 
     # Runs the initial configuration wizard, setting up the private GitHub
     # configuration repository
@@ -131,7 +91,7 @@ module FastlaneCI
       print_keys_file_information
       write_keys_file
       Launch.load_dot_env
-      create_remote_repo!
+      create_private_remote_configuration_repo
       print_users_json_file_information
       write_users_json_file
       print_projects_json_file_information
@@ -299,6 +259,35 @@ module FastlaneCI
       )
 
       UI.success("Wrote #{projects_json_file_path}")
+    end
+
+    #####################################################
+    # @!group Helpers: GitHub configuration helpers
+    #####################################################
+
+    # Configuration GitRepo
+    #
+    # @return [GitRepo]
+    def configuration_git_repo
+      @configuration_git_repo ||= FastlaneCI::GitRepo.new(
+        git_config: Launch.ci_config_repo,
+        provider_credential: Launch.provider_credential
+      )
+    end
+
+    # Creates a remote repository. If the operation is unsuccessful, the method
+    # throws an exception
+    #
+    # @raises [StandardError]
+    def create_private_remote_configuration_repo
+      repo_name = repo_shortform.split("/")[1]
+      clone_user_api.create_repository(repo_name, private: true)
+    end
+
+    # Commits the most recent changes and pushes them to the new repo
+    def commit_and_push_changes!
+      configuration_git_repo.commit_changes!
+      configuration_git_repo.push
     end
   end
 end
