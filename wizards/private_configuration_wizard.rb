@@ -217,7 +217,9 @@ module FastlaneCI
 
       ProjectsWriter.new(
         path: projects_json_file_path,
-        locals: {}
+        locals: {
+          project_full_name: project_full_name
+        }
       )
 
       UI.success("Wrote #{projects_json_file_path}")

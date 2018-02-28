@@ -12,8 +12,8 @@ module FastlaneCI
           {
             "repo_config": {
               "id": "#{SecureRandom.uuid}",
-              "git_url": "https://github.com/your-name/fastlane-ci-demoapp",
-              "full_name": "your-name/fastlane-ci-demoapp",
+              "git_url": "https://github.com/#{locals[:project_full_name]}",
+              "full_name": "#{locals[:project_full_name]}",
               "description": "Fastlane CI Demo App Repository",
               "name": "Fastlane CI Demo App",
               "provider_type_needed": "github",

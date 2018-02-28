@@ -7,7 +7,7 @@ module FastlaneCI
   # used normally
   module ConfigurationInputHelpers
     #####################################################
-    # @!group Configuration: configuration data
+    # @!group Keys Configuration Data
     #####################################################
 
     # An encryption key used to encrypt the CI user's API token
@@ -66,7 +66,21 @@ module FastlaneCI
     def repo_shortform
       @repo_shortform ||= begin
         UI.message("Please enter the name for your private configuration repo:")
-        UI.input("FASTLANE_CI_REPO_URL=https://github.com/ ")
+        UI.input("FASTLANE_CI_REPO_URL = https://github.com/ ")
+      end
+    end
+
+    #####################################################
+    # @!group Projects Configuration Data
+    #####################################################
+
+    # The full name for the project you wish to configure CI for
+    #
+    # @return [String]
+    def project_full_name
+      @project_full_name ||= begin
+        UI.message("Please enter the name of the project you wish to configure CI for:")
+        UI.input("full_name = https://github.com/ ")
       end
     end
   end

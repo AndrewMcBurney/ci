@@ -13,7 +13,7 @@ module FastlaneCI
     #
     # @param [String] path
     # @param [Hash]   locals
-    def initialize(path:, locals:)
+    def initialize(path:, locals: {})
       @path = path
       @locals = locals
     end
