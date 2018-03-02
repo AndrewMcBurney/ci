@@ -1,0 +1,44 @@
+<form method="POST" action="/configuration/projects/create">
+  <p>
+    <code>id=</code>
+    <input type="text" name="id" value=<%= SecureRandom.uuid %>>
+  </p>
+
+  <p>
+    <code>password_hash=</code>
+    <input type="text" name="password_hash">
+  </p>
+
+  <p>
+    <code>git_repo=</code>
+    <input type="text" name="git_repo">
+  </p>
+
+  <h4>Provider Credentials</h4>
+  <p>
+    <code>email</code>
+    <input type="text" name="provider_email">
+  </p>
+
+  <p>
+    <code>encrypted_api_token=</code>
+    <input type="text" name="provider_encrypted_api_token">
+  </p>
+
+  <p>
+    <code>provider_name=</code>
+    <input type="text" name="provider_name" value="GitHub">
+  </p>
+
+  <p>
+    <code>type=</code>
+    <input type="text" name="provider_name" value="github">
+  </p>
+
+  <p>
+    <code>full_name=</code>
+    <input type="text" name="provider_name" value="FastlaneCI">
+  </p>
+
+  <input type="submit" value="Add new project to configuration repo.">
+</form>

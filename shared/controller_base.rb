@@ -79,5 +79,15 @@ module FastlaneCI
       #   }
       # end
     end
+
+    protected
+
+    # Parses the JSON request body and returns a Ruby hash
+    #
+    # @param  [Sinatra::Request] request
+    # @return [Hash]
+    def parse_request_body(request)
+      JSON.parse(request.body.read).symbolize_keys
+    end
   end
 end

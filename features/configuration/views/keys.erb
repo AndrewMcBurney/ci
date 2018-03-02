@@ -1,0 +1,27 @@
+<div class="mdl-layout mdl-js-layout mdl-layout--fixed-drawer">
+  <header class="mdl-layout__header">
+    <div class="mdl-layout__header-row">
+      <span class="mdl-layout__title"><%= title %></span>
+    </div>
+  </header>
+
+  <%= erb :"../../partials/navigation" %>
+
+  <main class="mdl-layout__content" style="padding: 40px">
+    <% if variables[:status] == :error %>
+      <%= erb :"./partials/errors/_keys" %>
+    <% elsif variables[:status] == :success %>
+      <p>
+        <code>.keys</code> was successfully written to <code>~/.fastlane/ci</code>!
+      </p>
+    <% end %>
+
+    <% if variables[:keys].all?(&:nil?) %>
+      <%= erb :"./partials/warnings/no_env_variables" %>
+    <% end %>
+
+    <!-- Form to create/mutate environment variable data -->
+    <h3>Environment Variables</h3>
+    <%= erb :"./partials/forms/_keys" %>
+  </main>
+</div>

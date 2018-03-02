@@ -1,0 +1,59 @@
+<form method="POST" action="/configuration/users/create">
+  <p>
+    <code>id=</code>
+    <input type="text" name="id" value=<%= SecureRandom.uuid %>>
+  </p>
+
+  <p>
+    <code>project_name=</code>
+    <input type="text" name="project_name">
+  </p>
+
+  <p>
+    <code>lane=</code>
+    <input type="text" name="lane">
+  </p>
+
+  <p>
+    <code>enabled=</code>
+    <input type="text" name="enabled" value="true">
+  </p>
+
+  <h4>Repository Configuration</h4>
+  <p>
+    <code>repo_config.id</code>
+    <input type="text" name="repo_config_id" value=<%= SecureRandom.uuid %>>
+  </p>
+
+  <p>
+    <code>repo_config.git_url=</code>
+    <input type="text" name="repo_config_git_url" value="https://github.com/username/reponame">
+  </p>
+
+  <p>
+    <code>repo_config.full_name=</code>
+    <input type="text" name="repo_config_full_name" value="username/reponame">
+  </p>
+
+  <p>
+    <code>repo_config.description=</code>
+    <input type="text" name="repo_config_description">
+  </p>
+
+  <p>
+    <code>repo_config.name=</code>
+    <input type="text" name="repo_config_name">
+  </p>
+
+  <p>
+    <code>repo_config.provider_type_needed=</code>
+    <input type="text" name="repo_config_provider_type_needed" value="github">
+  </p>
+
+  <p>
+    <code>repo_config.hidden=</code>
+    <input type="text" name="repo_config_hidden" value="false">
+  </p>
+
+  <input type="submit" value="Add new user to configuration repo.">
+</form>

@@ -1,0 +1,40 @@
+<div class="mdl-layout mdl-js-layout mdl-layout--fixed-drawer">
+  <header class="mdl-layout__header">
+    <div class="mdl-layout__header-row">
+      <span class="mdl-layout__title"><%= title %></span>
+    </div>
+  </header>
+
+  <%= erb :"../../partials/navigation" %>
+
+  <main class="mdl-layout__content" style="padding: 40px">
+    <% if projects.nil? %>
+      <%= erb :"./partials/warnings/no_projects_json" %>
+    <% else %>
+      <!-- Projects found in projects.json -->
+      <!-- TODO: make these all input fields that any user can edit and save, or delete -->
+
+      <h3>Existing projects found in <code>projects.json</code></h3>
+      <% projects.each do |project| %>
+        <h3>User</h3>
+        <p><%= project.id %></p>
+        <p><%= project.project_name %></p>
+        <p><%= project.lane %></p>
+        <p><%= project.enabled %></p>
+
+        <h4>Repository configuration for <b><%= project.project_name %></b></h4>
+        <p><%= project.repo_config.id %></p>
+        <p><%= project.repo_config.git_url %></p>
+        <p><%= project.repo_config.full_name %></p>
+        <p><%= project.repo_config.description %></p>
+        <p><%= project.repo_config.name %></p>
+        <p><%= project.repo_config.provider_type_needed %></p>
+        <p><%= project.repo_config.hidden %></p>
+      <% end %>
+    <% end %>
+
+    <!-- Form to create another project to add to the `projects.json` -->
+    <h3>Add new project</h3>
+    <%= erb :"./partials/forms/_projects" %>
+  </main>
+</div>

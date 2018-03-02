@@ -1,0 +1,25 @@
+<div class="mdl-layout mdl-js-layout mdl-layout--fixed-drawer">
+  <header class="mdl-layout__header">
+    <div class="mdl-layout__header-row">
+      <span class="mdl-layout__title"><%= title %></span>
+    </div>
+  </header>
+
+  <%= erb :"../../partials/navigation" %>
+
+  <main class="mdl-layout__content" style="padding: 40px">
+    <% if first_time_user %>
+      <h1>Welcome to FastlaneCI 👋!</h1>
+      <b>
+        <p>A mobile-optimized, self-hosted continuous integration platform.</p>
+      </b>
+
+      <p>We've noticed this is your first time running the server. FastlaneCI
+        requires some configuration information from you to properly run the
+        server.</p>
+
+      <p>Please fill out and submit each of the three following forms to
+        continue using FastlaneCI.</p>
+    <% end %>
+  </main>
+</div>

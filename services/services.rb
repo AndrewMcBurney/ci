@@ -1,12 +1,13 @@
+require_relative "./code_hosting/git_hub_service"
 require_relative "./config_data_sources/json_project_data_source"
 require_relative "./config_service"
-require_relative "./worker_service"
-require_relative "./user_service"
+require_relative "./data_sources/json_build_data_source"
+require_relative "./data_sources/json_user_data_source"
+require_relative "./file_writer_service"
 require_relative "./project_service"
 require_relative "./notification_service"
-require_relative "./data_sources/json_user_data_source"
-require_relative "./data_sources/json_build_data_source"
-require_relative "./code_hosting/git_hub_service"
+require_relative "./user_service"
+require_relative "./worker_service"
 
 module FastlaneCI
   # A class that stores the singletones for each
@@ -40,6 +41,16 @@ module FastlaneCI
       self.ci_config_repo.local_repo_path
     end
 
+    # Configuration GitRepo
+    #
+    # @return [GitRepo]
+    def self.configuration_git_repo
+      @configuration_git_repo ||= FastlaneCI::GitRepo.new(
+        git_config: Launch.ci_config_repo,
+        provider_credential: Launch.provider_credential
+      )
+    end
+
     def self.ci_user
       # Find our fastlane.ci system user
       @_ci_user ||= Services.user_service.login(
@@ -67,7 +78,7 @@ module FastlaneCI
       )
     end
 
-    # Start up a UserService from our JSONUserDataSource
+    # Start up a NotificationService from our JSONNotificationDataSource
     def self.notification_service
       @_notification_service ||= FastlaneCI::NotificationService.new(
         notification_data_source: JSONNotificationDataSource.create(
@@ -90,6 +101,10 @@ module FastlaneCI
 
     def self.worker_service
       @_worker_service ||= FastlaneCI::WorkerService.new
+    end
+
+    def self.file_writer_service
+      @_file_writer_service ||= FastlaneCI::FileWriterService.new
     end
   end
 end

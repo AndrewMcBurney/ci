@@ -12,6 +12,10 @@ module FastlaneCI
     register AuthenticatedRequestChecker
     include FastlaneCI::Logging
 
+    # TODO: before each GET route, ensure the user has the correct configuration values set!
+    # redirect them to the configuration controller if they do not have the values set
+    # already
+
     def initialize(app)
       super(app)
 
