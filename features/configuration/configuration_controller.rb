@@ -4,15 +4,13 @@ require_relative "../../shared/authenticated_controller_base"
 require_relative "../../services/services"
 require_relative "../../services/api_clients/github_client"
 
-# TODO: form validations, error handling. Potentially metaprogram some of this
-# to reduce duplication
 module FastlaneCI
   #
   # A CRUD controller to manage configuration data for FastlaneCI. Walks the
   # user through configuration should they not have the proper metadata required
   # to run the server
   #
-  class ConfigurationController < ControllerBase
+  class ConfigurationController < AuthenticatedControllerBase
     include GitHubClient
 
     HOME = "/configuration"
@@ -25,34 +23,22 @@ module FastlaneCI
     #####################################################
 
     get HOME do
-      locals = {
-        title: "Configuration",
-        variables: { first_time_user: false }
-      }
+      locals = { title: "Configuration", variables: {} }
       erb(:index, locals: locals, layout: FastlaneCI.default_layout)
     end
 
     get "#{HOME}/keys" do
-      locals = {
-        title: "Keys",
-        variables: { keys: keys }
-      }
+      locals = { title: "Keys", variables: {} }
       erb(:keys, locals: locals, layout: FastlaneCI.default_layout)
     end
 
     get "#{HOME}/users" do
-      locals = {
-        title: "Users",
-        variables: { users: users }
-      }
+      locals = { title: "Users", variables: {} }
       erb(:users, locals: locals, layout: FastlaneCI.default_layout)
     end
 
     get "#{HOME}/projects" do
-      locals = {
-        title: "Projects",
-        variables: { projects: projects }
-      }
+      locals = { title: "Projects", variables: {} }
       erb(:projects, locals: locals, layout: FastlaneCI.default_layout)
     end
 
@@ -65,12 +51,13 @@ module FastlaneCI
         if valid_locals?(params, keys_locals)
           Services.file_writer_service.write_keys_file!(locals: params)
           Launch.load_dot_env
+          create_private_remote_configuration_repo
           STATUS[:success]
         else
           STATUS[:error]
         end
 
-      locals = { title: "Keys", variables: { keys: keys, status: status } }
+      locals = { title: "Keys", variables: { status: status } }
       erb(:keys, locals: locals, layout: FastlaneCI.default_layout)
     end
 
@@ -88,17 +75,17 @@ module FastlaneCI
           STATUS[:error]
         end
 
-      locals = { title: "Users", variables: { users: users, status: status } }
+      locals = { title: "Users", variables: { status: status } }
       erb(:keys, locals: locals, layout: FastlaneCI.default_layout)
     end
 
     # Updates a user existing in the configuration repository `users.json`
-    post "#{HOME}/users/update/:id" do
+    post "#{HOME}/users/update" do
     end
 
     # Removes a user from the configuration git repo `users.json`, but
     # does not actually delete the user
-    post "#{HOME}/users/delete/:id" do
+    post "#{HOME}/users/delete" do
     end
 
     #####################################################
@@ -114,18 +101,8 @@ module FastlaneCI
           STATUS[:error]
         end
 
-      locals = { title: "Projects", variables: { projects: projects, status: status } }
+      locals = { title: "Projects", variables: { status: status } }
       erb(:projects, locals: locals, layout: FastlaneCI.default_layout)
-    end
-
-    # Updates a project existing in the configuration repository `projects.json`
-    post "#{HOME}/projects/update/:id" do
-    end
-
-    # Removes a project from the configuration git repo `projects.json`, but
-    # does not actually delete the project repository
-    post "#{HOME}/projects/delete/:id" do
-      # TODO: consider using projects_controller delete action instead? - probably better
     end
 
     private
@@ -146,12 +123,28 @@ module FastlaneCI
       }
     end
 
+    # @return [Array[User]]
     def users
-      nil
+      Services.user_service.user_data_source.users
     end
 
+    # Empty user object for new user form
+    #
+    # @return [User]
+    def new_user
+      @new_user ||= User.new(provider_credentials: [GitHubProviderCredential.new])
+    end
+
+    # @return [Array[Project]]
     def projects
-      nil
+      Services.project_service.project_data_source.projects
+    end
+
+    # Empty project object for new user form
+    #
+    # @return [Project]
+    def new_project
+      @new_user ||= Project.new(repo_config: GitRepoConfig.new)
     end
 
     #####################################################
@@ -202,6 +195,15 @@ module FastlaneCI
     def commit_and_push_changes!
       Services.configuration_git_repo.commit_changes!
       Services.configuration_git_repo.push
+    end
+
+    #####################################################
+    # @!group Other Helpers: unrelated helpers
+    #####################################################
+
+    # TODO: implement me
+    def first_time_user?
+      true
     end
   end
 end

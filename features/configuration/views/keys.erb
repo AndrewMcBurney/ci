@@ -16,7 +16,7 @@
       </p>
     <% end %>
 
-    <% if variables[:keys].all?(&:nil?) %>
+    <% if keys.all?(&:nil?) %>
       <%= erb :"./partials/warnings/no_env_variables" %>
     <% end %>
 
