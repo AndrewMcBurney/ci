@@ -21,5 +21,78 @@
       <p>Please fill out and submit each of the three following forms to
         continue using FastlaneCI.</p>
     <% end %>
+
+    <!--**************************
+      Environment Variables
+    ***************************-->
+
+    <% if variables[:status] == :error %>
+      <%= erb :"./errors/_keys" %>
+    <% elsif variables[:status] == :success %>
+      <p>
+        <code>.keys</code> was successfully written to <code>~/.fastlane/ci</code>!
+      </p>
+    <% end %>
+
+    <% if keys.any?(&:nil?) %>
+      <%= erb :"./warnings/_env_variables" %>
+    <% end %>
+
+    <!-- Form to create/mutate environment variable data -->
+
+    <h3>Environment Variables</h3>
+    <%= erb :"./forms/_keys" %>
+
+    <!--**************************
+      Projects
+    ***************************-->
+
+    <% if projects.nil? %>
+      <%= erb :"./warnings/_projects_json" %>
+    <% else %>
+      <!-- Projects found in projects.json -->
+
+      <h3>Existing projects found in <code>projects.json</code></h3>
+      <% projects.each do |project| %>
+        <%=
+          erb :"../../project/views/forms/_projects",
+          locals: { project: project, action: "#{project.id}/save" }
+        %>
+      <% end %>
+    <% end %>
+
+    <!-- Form to create another project to add to the `projects.json` -->
+
+    <h3>Add new project</h3>
+    <%=
+      erb :"../../project/views/forms/_projects",
+      locals: { project: new_project, action: "add" }
+    %>
+
+    <!--**************************
+      Users
+    ***************************-->
+
+    <% if users.nil? %>
+      <%= erb :"./warnings/_users_json" %>
+    <% else %>
+      <!-- Users found in users.json -->
+
+      <h3>Existing users found in <code>users.json</code></h3>
+      <% users.each do |user| %>
+        <%=
+          erb :"../../users/views/forms/_users",
+          locals: { user: user, action: "update" }
+        %>
+      <% end %>
+    <% end %>
+
+    <!-- Form to create another user to add to the `users.json` -->
+
+    <h3>Add new user</h3>
+    <%=
+      erb :"../../users/views/forms/_users",
+      locals: { user: new_user, action: "create" }
+    %>
   </main>
 </div>

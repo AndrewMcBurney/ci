@@ -3,7 +3,7 @@ require_relative "./config_data_sources/json_project_data_source"
 require_relative "./config_service"
 require_relative "./data_sources/json_build_data_source"
 require_relative "./data_sources/json_user_data_source"
-require_relative "./file_writer_service"
+require_relative "./environment_variable_service"
 require_relative "./project_service"
 require_relative "./notification_service"
 require_relative "./user_service"
@@ -14,22 +14,25 @@ module FastlaneCI
   # service we provide
   class Services
     class << self
-      attr_reader :ci_config_repo
+      include FastlaneCI::Logging
+    end
 
-      def ci_config_repo=(value)
-        # When setting a new CI config repo
-        # we gotta make sure to also re-init all the other
-        # services and variables we use
-        # TODO: Verify that we actually need to do this
-        @_user_service = nil
-        @_build_service = nil
-        @_project_service = nil
-        @_ci_user = nil
-        @_config_service = nil
-        @_worker_service = nil
+    # Resets all the memoized services which rely on configurable environment
+    # variables
+    def self.reset_services!
+      logger.info("Reseting memoized services to `nil`")
 
-        @ci_config_repo = value
-      end
+      @_ci_config_repo = nil
+      @_configuration_git_repo = nil
+      @_ci_user = nil
+      @_provider_credential = nil
+
+      @_project_service = nil
+      @_user_service = nil
+      @_notification_service = nil
+      @_build_service = nil
+      @_config_service = nil
+      @_worker_service = nil
     end
 
     ########################################################
@@ -41,13 +44,26 @@ module FastlaneCI
       self.ci_config_repo.local_repo_path
     end
 
+    # Setup the fastlane.ci GitRepoConfig
+    #
+    # @return [GitRepoConfig]
+    def self.ci_config_repo
+      @_ci_config_repo ||= GitRepoConfig.new(
+        id: "fastlane-ci-config",
+        git_url: ENV["FASTLANE_CI_REPO_URL"],
+        description: "Contains the fastlane.ci configuration",
+        name: "fastlane ci",
+        hidden: true
+      )
+    end
+
     # Configuration GitRepo
     #
     # @return [GitRepo]
     def self.configuration_git_repo
-      @configuration_git_repo ||= FastlaneCI::GitRepo.new(
-        git_config: Launch.ci_config_repo,
-        provider_credential: Launch.provider_credential
+      @_configuration_git_repo ||= FastlaneCI::GitRepo.new(
+        git_config: ci_config_repo,
+        provider_credential: provider_credential
       )
     end
 
@@ -57,6 +73,23 @@ module FastlaneCI
         email: ENV["FASTLANE_CI_USER"],
         password: ENV["FASTLANE_CI_PASSWORD"],
         ci_config_repo: self.ci_config_repo
+      )
+    end
+
+    # This happens on the first launch of CI
+    # We don't have access to the config directory yet
+    # So we'll use ENV variables that are used for the initial clone only
+    #
+    # Long term, we'll have a nice onboarding flow, where you can enter those credentials
+    # as part of a web UI. But for containers (e.g. Google Cloud App Engine)
+    # we'll have to support ENV variables also, for the initial clone, so that's the code below
+    # Clone the repo, and login the user
+    #
+    # @return [GitHubProviderCredential]
+    def self.provider_credential
+      @_provider_credential ||= GitHubProviderCredential.new(
+        email: ENV["FASTLANE_CI_INITIAL_CLONE_EMAIL"],
+        api_token: ENV["FASTLANE_CI_INITIAL_CLONE_API_TOKEN"]
       )
     end
 
@@ -103,8 +136,12 @@ module FastlaneCI
       @_worker_service ||= FastlaneCI::WorkerService.new
     end
 
-    def self.file_writer_service
-      @_file_writer_service ||= FastlaneCI::FileWriterService.new
+    def self.environment_variable_service
+      @_environment_variable_service ||= FastlaneCI::EnvironmentVariableService.new
+    end
+
+    def self.provider_credential_service
+      @_provider_credential_service ||= FastlaneCI::ProviderCredentialService.new
     end
   end
 end

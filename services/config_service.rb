@@ -76,5 +76,34 @@ module FastlaneCI
         raise "Unrecognized provider_credential #{provider_credential.type}"
       end
     end
+
+    # Verify that fastlane.ci is already set up on this machine.
+    # If that's not the case, we have to make sure to trigger the initial clone
+    def trigger_initial_ci_setup
+      logger.info("No config repo cloned yet, doing that now")
+
+      # Trigger the initial clone
+      FastlaneCI::ProjectService.new(
+        project_data_source: FastlaneCI::JSONProjectDataSource.create(
+          Services.ci_config_repo,
+          git_repo_config: Services.ci_config_repo,
+          provider_credential: Services.provider_credential
+        )
+      )
+      logger.info("Successfully did the initial clone on this machine")
+    rescue StandardError => ex
+      logger.error("Something went wrong on the initial clone")
+
+      if ENV["FASTLANE_CI_INITIAL_CLONE_API_TOKEN"].to_s.length == 0 || ENV["FASTLANE_CI_INITIAL_CLONE_EMAIL"].to_s.length == 0
+        logger.error("Make sure to provide your `FASTLANE_CI_INITIAL_CLONE_EMAIL` and `FASTLANE_CI_INITIAL_CLONE_API_TOKEN` ENV variables")
+      end
+
+      raise ex
+    end
+
+    # @return [Boolean]
+    def first_time_user?
+      !Services.ci_config_repo.exists?
+    end
   end
 end

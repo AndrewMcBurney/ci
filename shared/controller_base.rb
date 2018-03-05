@@ -1,6 +1,7 @@
 require "sinatra/base"
 require "sinatra/reloader"
 require "sinatra/custom_logger"
+require "set"
 require "logger"
 
 require_relative "logging_module"
@@ -13,6 +14,9 @@ module FastlaneCI
   #
   class ControllerBase < Sinatra::Base
     include FastlaneCI::Logging
+
+    # Enum for status of POST operations
+    STATUS = { success: :success, error: :error }
 
     # I don't like this here, I'd rather use the mixin for organization, but that isn't done
     # TODO: use mixin
@@ -88,6 +92,15 @@ module FastlaneCI
     # @return [Hash]
     def parse_request_body(request)
       JSON.parse(request.body.read).symbolize_keys
+    end
+
+    # Validates all the required keys are present, and that no values are nil
+    #
+    # @param  [Hash]       actuals
+    # @param  [Set[Symbol] expected_keys
+    # @return [Boolean]
+    def valid_params?(actuals, expected_keys)
+      expected_keys.subset?(actuals.keys.to_set) && actuals.values.none?(&:nil?)
     end
   end
 end

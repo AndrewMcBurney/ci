@@ -1,9 +1,5 @@
-<form method="POST" action=<%= action %>
-  <p>
-    <code>id=</code>
-    <input type="text" name="id"
-           value=<%= project.id %>>
-  </p>
+<form method="POST" action="projects/<%= action %>">
+  <input type="hidden" name="id" value=<%= project.id %>>
 
   <p>
     <code>project_name=</code>
@@ -66,5 +62,5 @@
            value=<%= project.repo_config.hidden %>>
   </p>
 
-  <input type="submit" value="Add new user to configuration repo.">
+  <input type="submit" value="<%= action.capitalize %> project">
 </form>
