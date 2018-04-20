@@ -24,7 +24,7 @@ module FastlaneCI
     # @param  [ProviderCredential] provider_credential
     def initialize(provider_credential:)
       @onboarding_user_client = Octokit::Client.new(access_token: provider_credential.api_token)
-      @bot_user_client = Octokit::Client.new(access_token: FastlaneCI.env.ci_user_api_token)
+      @bot_user_client = Octokit::Client.new(access_token: FastlaneCI.dot_keys.ci_user_api_token)
     end
 
     # Sets up the `fastlane.ci` configuration repository, with the necessary

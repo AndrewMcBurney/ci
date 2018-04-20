@@ -191,11 +191,13 @@ module FastlaneCI
     end
 
     def self.bot_user_client
-      @_bot_user_client ||= Octokit::Client.new(access_token: FastlaneCI.env.ci_user_api_token)
+      @_bot_user_client ||= Octokit::Client.new(access_token: FastlaneCI.dot_keys.ci_user_api_token)
     end
 
     def self.onboarding_user_client
-      @_onboarding_user_client ||= Octokit::Client.new(access_token: FastlaneCI.env.initial_onboarding_user_api_token)
+      @_onboarding_user_client ||= Octokit::Client.new(
+        access_token: FastlaneCI.dot_keys.initial_onboarding_user_api_token
+      )
     end
   end
 end
