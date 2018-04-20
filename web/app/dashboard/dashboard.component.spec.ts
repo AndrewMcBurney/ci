@@ -1,15 +1,15 @@
 import 'rxjs/add/observable/of';
 
 import {async, ComponentFixture, fakeAsync, TestBed, tick} from '@angular/core/testing';
-import {MatCardModule} from '@angular/material/card';
-import {MatIconModule} from '@angular/material/icon';
-import {MatTableModule} from '@angular/material/table';
+import {RouterModule} from '@angular/router';
+import {MomentModule} from 'ngx-moment';
 import {Observable} from 'rxjs/Observable';
 import {Subject} from 'rxjs/Subject';
 
 import {BuildStatus} from '../common/constants';
 import {ProjectSummary} from '../models/project_summary';
 import {DataService} from '../services/data.service';
+import {SharedMaterialModule} from '../shared_material.module';
 
 import {DashboardComponent} from './dashboard.component';
 import {mockProjectSummaryList} from './test_helpers/mock_project_summary';
@@ -24,7 +24,7 @@ describe('DashboardComponent', () => {
 
     TestBed
         .configureTestingModule({
-          imports: [MatIconModule, MatCardModule, MatTableModule],
+          imports: [SharedMaterialModule, MomentModule, RouterModule],
           declarations: [
             DashboardComponent,
           ],
